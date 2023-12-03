@@ -1,9 +1,9 @@
 package main
 
 import (
-	"ruan.moolman/aoc2023/day2"
+	day "ruan.moolman/aoc2023/day3"
 )
 
 func main() {
-	day2.Execute()
+	day.Execute()
 }
