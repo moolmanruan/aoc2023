@@ -2,6 +2,7 @@ package day4
 
 import (
 	"fmt"
+	intmath "github.com/thomaso-mirodin/intmath/intgr"
 	"regexp"
 	"strconv"
 	"strings"
@@ -54,19 +55,7 @@ func winningNumbers(l CardLine) int {
 }
 
 func scoreLine(l CardLine) int {
-	score := 0
-	for _, n := range l.actualNumbers {
-		for _, m := range l.myNumbers {
-			if n == m {
-				if score == 0 {
-					score = 1
-				} else {
-					score *= 2
-				}
-			}
-		}
-	}
-	return score
+	return intmath.Pow(2, winningNumbers(l)-1)
 }
 
 func scoreCard(lines []CardLine) int {
