@@ -41,6 +41,18 @@ func parse(input string) []CardLine {
 	return cc
 }
 
+func winningNumbers(l CardLine) int {
+	c := 0
+	for _, n := range l.actualNumbers {
+		for _, m := range l.myNumbers {
+			if n == m {
+				c++
+			}
+		}
+	}
+	return c
+}
+
 func scoreLine(l CardLine) int {
 	score := 0
 	for _, n := range l.actualNumbers {
@@ -66,6 +78,27 @@ func scoreCard(lines []CardLine) int {
 }
 
 func Execute() {
+	cardLines := parse(input)
+	counts := make([]int, len(cardLines))
+	for i := range counts {
+		counts[i] = 1
+	}
+
+	for li, l := range cardLines {
+		score := winningNumbers(l)
+		for c := li + 1; c < li+1+score; c++ {
+			counts[c] += counts[li]
+		}
+	}
+
+	sum := 0
+	for _, c := range counts {
+		sum += c
+	}
+	fmt.Println("answer", sum)
+}
+
+func ExecutePart1() {
 	results := parse(input)
 	fmt.Println("answer", scoreCard(results))
 }
