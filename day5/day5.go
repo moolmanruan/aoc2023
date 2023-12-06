@@ -103,7 +103,36 @@ func mapSeeds(seeds []int, mappings []Mapping) []seedMap {
 	return mm
 }
 
-func parseSeeds(input string) []int {
+func parseSeedsPart2(input string) []int {
+	line := strings.Split(input, "\n")[0]
+	vvStr := strings.Split(strings.Trim(strings.Split(line, ":")[1], " "), " ")
+	var vv []int
+	for i := 0; i < len(vvStr); i += 2 {
+		from := mustAtoi(vvStr[i])
+		count := mustAtoi(vvStr[i+1])
+		for s := from; s < from+count; s++ {
+			vv = append(vv, s)
+		}
+	}
+	return vv
+}
+
+func Execute() {
+	inputString := input
+	seeds := parseSeedsPart2(inputString)
+	mm := parseMappings(inputString)
+	ss := mapSeeds(seeds, mm)
+	ans := -1
+	for _, s := range ss {
+		locationID := s["location"]
+		if locationID < ans || ans == -1 {
+			ans = locationID
+		}
+	}
+	fmt.Printf("answer %d\n", ans)
+}
+
+func parseSeedsPart1(input string) []int {
 	line := strings.Split(input, "\n")[0]
 	valuesString := strings.Trim(strings.Split(line, ":")[1], " ")
 	var vv []int
@@ -113,9 +142,9 @@ func parseSeeds(input string) []int {
 	return vv
 }
 
-func Execute() {
-	inputString := example
-	seeds := parseSeeds(inputString)
+func ExecutePart1() {
+	inputString := input
+	seeds := parseSeedsPart1(inputString)
 	mm := parseMappings(inputString)
 	ss := mapSeeds(seeds, mm)
 	ans := -1
