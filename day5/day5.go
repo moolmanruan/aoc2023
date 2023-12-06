@@ -8,6 +8,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"time"
 )
 import _ "embed"
 
@@ -16,6 +17,19 @@ var example string
 
 //go:embed input.txt
 var input string
+
+type Range struct {
+	start int
+	count int
+}
+
+func (r Range) String() string {
+	return fmt.Sprintf("[%d, %d)", r.start, r.end())
+}
+
+func (r Range) end() int {
+	return r.start + r.count
+}
 
 type MappingRange struct {
 	source      int
@@ -101,64 +115,25 @@ func parseMappings(input string) []Mapping {
 	return mm
 }
 
-type seedMap map[string]int
-
-func mapID(id int, ranges []MappingRange) int {
-	for _, r := range ranges {
-		if id >= r.source && id < r.source+r.count {
-			return r.destination + (id - r.source)
-		}
-	}
-	return id
-}
-
-func mapSeed(seed int, mappings []Mapping) seedMap {
-	sm := seedMap{"seed": seed}
-	for _, m := range mappings {
-		fromID := sm[m.from]
-		sm[m.to] = mapID(fromID, m.ranges)
-	}
-	return sm
-}
-
-func mapSeeds(seeds []int, mappings []Mapping) []seedMap {
-	var mm []seedMap
-	for _, s := range seeds {
-		mm = append(mm, mapSeed(s, mappings))
-	}
-	return mm
-}
-
-type IDRange struct {
-	start int
-	count int
-}
-
-func (r IDRange) String() string {
-	return fmt.Sprintf("[%d, %d)", r.start, r.end())
-}
-
-func (r IDRange) end() int {
-	return r.start + r.count
-}
-
-func parseSeedRanges(input string) []IDRange {
+func parseRanges(input string) []Range {
 	line := strings.Split(input, "\n")[0]
 	vvStr := strings.Split(strings.Trim(strings.Split(line, ":")[1], " "), " ")
-	var srs []IDRange
+	var srs []Range
 	for i := 0; i < len(vvStr); i += 2 {
-		srs = append(srs, IDRange{
+		srs = append(srs, Range{
 			start: mustAtoi(vvStr[i]),
 			count: mustAtoi(vvStr[i+1]),
 		})
 	}
 
-	slices.SortFunc(srs, func(a, b IDRange) int {
+	slices.SortFunc(srs, func(a, b Range) int {
 		return cmp.Compare(a.start, b.start)
 	})
 	return srs
 }
 
+// Return the range that contains the index value.
+// The second return value indicates if a range could be found or not.
 func rangeForIndex(mapping Mapping, index int) (MappingRange, bool) {
 	for _, r := range mapping.ranges {
 		if r.sourceRangeContains(index) {
@@ -167,6 +142,9 @@ func rangeForIndex(mapping Mapping, index int) (MappingRange, bool) {
 	}
 	return MappingRange{}, false
 }
+
+// Return the first range comes after the given index value.
+// The second return value indicates if a range could be found or not.
 func nextRangeAfterIndex(mapping Mapping, index int) (MappingRange, bool) {
 	for _, r := range mapping.ranges {
 		if r.source >= index {
@@ -176,34 +154,38 @@ func nextRangeAfterIndex(mapping Mapping, index int) (MappingRange, bool) {
 	return MappingRange{}, false
 }
 
-func applyMappingToRange(idRange IDRange, mapping Mapping) []IDRange {
-	var rr []IDRange
-	i := idRange.start
-	for i < idRange.end() {
+// Convert the source `inputRange` to a list of destination ranges using the `mapping` provided
+func applyMappingToRange(inputRange Range, mapping Mapping) []Range {
+	var outputRanges []Range
+	i := inputRange.start
+	for i < inputRange.end() {
 		if r, ok := rangeForIndex(mapping, i); ok {
 			d := r.diff()
-			count := intmath.Min(r.sourceEnd(), idRange.end()) - i
-			rr = append(rr, IDRange{start: i + d, count: count})
+			count := intmath.Min(r.sourceEnd(), inputRange.end()) - i
+			outputRanges = append(outputRanges, Range{start: i + d, count: count})
 			i += count
 		} else {
 			if nextR, ok := nextRangeAfterIndex(mapping, i); ok {
-				count := intmath.Min(nextR.source, idRange.end()) - i
-				rr = append(rr, IDRange{start: i, count: count})
+				count := intmath.Min(nextR.source, inputRange.end()) - i
+				outputRanges = append(outputRanges, Range{start: i, count: count})
 				i += count
 			} else {
-				newRange := IDRange{start: i, count: idRange.end() - i}
-				rr = append(rr, newRange)
+				newRange := Range{start: i, count: inputRange.end() - i}
+				outputRanges = append(outputRanges, newRange)
 				i += newRange.count
 			}
 		}
 	}
-	return rr
+	return outputRanges
 }
 
-func applyMappingsToRange(idRange IDRange, mappings []Mapping) []IDRange {
-	rr := []IDRange{idRange}
+// Apply a list of `mappings` to the source `inputRange` range to get a list of destination output ranges.
+// The first mapping is applied to the input range, while the following mappings are applied to result of the resulting
+// ranges of the previous mapping.
+func applyMappingsToRange(inputRange Range, mappings []Mapping) []Range {
+	rr := []Range{inputRange}
 	for _, m := range mappings {
-		var rrNew []IDRange
+		var rrNew []Range
 		for _, r := range rr {
 			rrNew = append(rrNew, applyMappingToRange(r, m)...)
 		}
@@ -212,8 +194,9 @@ func applyMappingsToRange(idRange IDRange, mappings []Mapping) []IDRange {
 	return rr
 }
 
-func mapIDRanges(rr []IDRange, mappings []Mapping) []IDRange {
-	var mm []IDRange
+// Apply multiple mappings to multiple input ranges to get the destination ranges.
+func applyMappingsToRanges(rr []Range, mappings []Mapping) []Range {
+	var mm []Range
 	for _, s := range rr {
 		mm = append(mm, applyMappingsToRange(s, mappings)...)
 	}
@@ -221,17 +204,19 @@ func mapIDRanges(rr []IDRange, mappings []Mapping) []IDRange {
 }
 
 func Execute() {
+	t := time.Now()
 	inputString := input
-	seeds := parseSeedRanges(inputString)
+	srcRanges := parseRanges(inputString)
 	mm := parseMappings(inputString)
-	rr := mapIDRanges(seeds, mm)
+	destRanges := applyMappingsToRanges(srcRanges, mm)
 	ans := -1
-	for _, s := range rr {
+	for _, s := range destRanges {
 		if s.start < ans || ans == -1 {
 			ans = s.start
 		}
 	}
-	fmt.Printf("answer %d\n", ans)
+
+	fmt.Printf("Answer: %d\n(%d μs)\n", ans, time.Now().Sub(t).Microseconds())
 }
 
 func parseSeeds(input string) []int {
@@ -246,15 +231,17 @@ func parseSeeds(input string) []int {
 
 func ExecutePart1() {
 	inputString := input
-	seeds := parseSeeds(inputString)
+	var idRanges []Range
+	for _, s := range parseSeeds(inputString) {
+		idRanges = append(idRanges, Range{start: s, count: 1})
+	}
 	mm := parseMappings(inputString)
-	ss := mapSeeds(seeds, mm)
+	ss := applyMappingsToRanges(idRanges, mm)
 	ans := -1
 	for _, s := range ss {
-		locationID := s["location"]
-		if locationID < ans || ans == -1 {
-			ans = locationID
+		if s.start < ans || ans == -1 {
+			ans = s.start
 		}
 	}
-	fmt.Printf("answer %d\n", ans)
+	fmt.Printf("Answer %d\n", ans)
 }
