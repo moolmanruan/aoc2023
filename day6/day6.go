@@ -3,8 +3,8 @@ package day6
 import "fmt"
 
 type Race struct {
-	time     int
-	distance int
+	time     int64
+	distance int64
 }
 
 var example = []Race{
@@ -12,28 +12,39 @@ var example = []Race{
 	{15, 40},
 	{30, 200},
 }
+var example2 = Race{
+	71530,
+	940200,
+}
 var input = []Race{
 	{47, 207},
 	{84, 1394},
 	{74, 1209},
 	{67, 1014},
 }
+var input2 = Race{
+	47847467,
+	207139412091014,
+}
 
-func distance(holdTime int, totalTime int) int {
+func distance(holdTime int64, totalTime int64) int64 {
 	return (totalTime - holdTime) * holdTime
+}
+
+func calculateRace(r Race) int {
+	rc := 0
+	for i := int64(0); i < r.time; i++ {
+		if distance(i, r.time) > r.distance {
+			rc++
+		}
+	}
+	return rc
 }
 
 func calculateMargin(rr []Race) int {
 	var aa []int
 	for _, r := range rr {
-		rc := 0
-		for i := 0; i < r.time; i++ {
-			if distance(i, r.time) > r.distance {
-				rc++
-			}
-		}
-
-		aa = append(aa, rc)
+		aa = append(aa, calculateRace(r))
 	}
 	ans := aa[0]
 	for _, v := range aa[1:] {
@@ -43,5 +54,9 @@ func calculateMargin(rr []Race) int {
 }
 
 func Execute() {
+	fmt.Printf("answer %d\n", calculateRace(input2))
+}
+
+func ExecutePart1() {
 	fmt.Printf("answer %d\n", calculateMargin(input))
 }
