@@ -8,7 +8,6 @@ import (
 	"slices"
 	"strconv"
 	"strings"
-	"time"
 )
 import _ "embed"
 
@@ -203,8 +202,7 @@ func applyMappingsToRanges(rr []Range, mappings []Mapping) []Range {
 	return mm
 }
 
-func Execute() {
-	t := time.Now()
+func Part2() string {
 	inputString := input
 	srcRanges := parseRanges(inputString)
 	mm := parseMappings(inputString)
@@ -216,7 +214,7 @@ func Execute() {
 		}
 	}
 
-	fmt.Printf("Answer: %d\n(%d μs)\n", ans, time.Now().Sub(t).Microseconds())
+	return strconv.Itoa(ans)
 }
 
 func parseSeeds(input string) []int {
@@ -229,7 +227,7 @@ func parseSeeds(input string) []int {
 	return vv
 }
 
-func ExecutePart1() {
+func Part1() string {
 	inputString := input
 	var idRanges []Range
 	for _, s := range parseSeeds(inputString) {
@@ -243,5 +241,5 @@ func ExecutePart1() {
 			ans = s.start
 		}
 	}
-	fmt.Printf("Answer %d\n", ans)
+	return strconv.Itoa(ans)
 }

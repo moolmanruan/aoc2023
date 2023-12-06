@@ -1,6 +1,8 @@
 package day6
 
-import "fmt"
+import (
+	"strconv"
+)
 
 type Race struct {
 	time     int64
@@ -53,10 +55,10 @@ func calculateMargin(rr []Race) int {
 	return ans
 }
 
-func Execute() {
-	fmt.Printf("answer %d\n", calculateRace(input2))
+func Part2() string {
+	return strconv.Itoa(calculateRace(input2))
 }
 
-func ExecutePart1() {
-	fmt.Printf("answer %d\n", calculateMargin(input))
+func Part1() string {
+	return strconv.Itoa(calculateMargin(input))
 }

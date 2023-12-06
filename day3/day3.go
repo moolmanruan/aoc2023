@@ -52,7 +52,7 @@ func gears(input string) []Position {
 	return pp
 }
 
-func Execute() {
+func Part2() string {
 	i := input
 	gg := gears(i)
 	nn := numbers(i)
@@ -63,7 +63,7 @@ func Execute() {
 			ans += gr
 		}
 	}
-	fmt.Printf("Answer: %d\n", ans)
+	return strconv.Itoa(ans)
 }
 
 type Position struct {
@@ -141,7 +141,7 @@ func numberAdjacentToSymbol(nn Number, ss []Position) bool {
 	return false
 }
 
-func ExecutePart1() {
+func Part1() string {
 	i := input
 	ss := symbols(i)
 	fmt.Println(ss)
@@ -154,5 +154,5 @@ func ExecutePart1() {
 			ans += n.value
 		}
 	}
-	fmt.Printf("Answer: %d\n", ans)
+	return strconv.Itoa(ans)
 }

@@ -1,7 +1,6 @@
 package day4
 
 import (
-	"fmt"
 	intmath "github.com/thomaso-mirodin/intmath/intgr"
 	"regexp"
 	"strconv"
@@ -66,7 +65,7 @@ func scoreCard(lines []CardLine) int {
 	return score
 }
 
-func Execute() {
+func Part2() string {
 	cardLines := parse(input)
 	counts := make([]int, len(cardLines))
 	for i := range counts {
@@ -84,10 +83,11 @@ func Execute() {
 	for _, c := range counts {
 		sum += c
 	}
-	fmt.Println("answer", sum)
+
+	return strconv.Itoa(sum)
 }
 
-func ExecutePart1() {
+func Part1() string {
 	results := parse(input)
-	fmt.Println("answer", scoreCard(results))
+	return strconv.Itoa(scoreCard(results))
 }

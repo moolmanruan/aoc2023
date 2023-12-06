@@ -1,7 +1,6 @@
 package day1
 
 import (
-	"fmt"
 	"strconv"
 	"strings"
 )
@@ -53,7 +52,7 @@ func lastValue(line string) string {
 	}
 	return value
 }
-func Execute() {
+func Part2() string {
 	lines := strings.Split(input, "\n")
 	sum := 0
 	for _, l := range lines {
@@ -65,10 +64,10 @@ func Execute() {
 		}
 		sum += val
 	}
-	fmt.Println(sum)
+	return strconv.Itoa(sum)
 }
 
-func Execute1() {
+func Part1() string {
 	lines := strings.Split(input, "\n")
 	sum := 0
 	for _, l := range lines {
@@ -81,5 +80,5 @@ func Execute1() {
 		}
 		sum += val
 	}
-	fmt.Println(sum)
+	return strconv.Itoa(sum)
 }
