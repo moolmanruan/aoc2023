@@ -1,7 +1,7 @@
 package main
 
 import (
-	day "ruan.moolman/aoc2023/day6"
+	day "ruan.moolman/aoc2023/day5"
 )
 
 func main() {
