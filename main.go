@@ -9,6 +9,7 @@ import (
 	"ruan.moolman/aoc2023/day4"
 	"ruan.moolman/aoc2023/day5"
 	"ruan.moolman/aoc2023/day6"
+	"ruan.moolman/aoc2023/day7"
 	"time"
 )
 
@@ -36,6 +37,10 @@ var days = map[string]map[string]func() string{
 	"6": {
 		"1": day6.Part1,
 		"2": day6.Part2,
+	},
+	"7": {
+		"1": day7.Part1,
+		"2": day7.Part2,
 	},
 }
 
