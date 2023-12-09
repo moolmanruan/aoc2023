@@ -2,7 +2,6 @@ package day8
 
 import (
 	_ "embed"
-	"fmt"
 	"regexp"
 	"strconv"
 	"strings"
@@ -54,10 +53,10 @@ func parseNodes(s string) map[string]Node {
 	return nn
 }
 
-func walk(ii []Instruction, nn map[string]Node) int {
+func walk(start string, ii []Instruction, nn map[string]Node, end func(string) bool) int {
 	var c int
 	var i int
-	n := "AAA"
+	n := start
 	for {
 		node := nn[n]
 		if ii[i] == Left {
@@ -66,7 +65,7 @@ func walk(ii []Instruction, nn map[string]Node) int {
 			n = node.right
 		}
 		c++
-		if n == "ZZZ" {
+		if end(n) {
 			break
 		}
 		i++
@@ -81,7 +80,9 @@ func Part1() string {
 	data := input
 	ii := parseInstructions(data)
 	nn := parseNodes(data)
-	return strconv.Itoa(walk(ii, nn))
+	return strconv.Itoa(walk("AAA", ii, nn, func(i string) bool {
+		return i == "ZZZ"
+	}))
 }
 
 func reachedEnd(nn []string) bool {
@@ -93,38 +94,38 @@ func reachedEnd(nn []string) bool {
 	return true
 }
 
+func endOnZ(i string) bool {
+	return strings.HasSuffix(i, "Z")
+}
+
 func ghostWalk(ii []Instruction, nn map[string]Node) int {
-	var c int
-	var i int
-	var nodes []string
+	var counts []int
 	for k := range nn {
 		if strings.HasSuffix(k, "A") {
-			nodes = append(nodes, k)
+			count := walk(k, ii, nn, endOnZ)
+			counts = append(counts, count)
 		}
 	}
-	fmt.Println("Start nodes", nodes)
-	for {
-		instruction := ii[i]
-		newNodes := make([]string, 0)
-		for _, n := range nodes {
-			if instruction == Left {
-				newNodes = append(newNodes, nn[n].left)
-			} else {
-				newNodes = append(newNodes, nn[n].right)
-			}
-		}
-		nodes = newNodes
-		c++
-		if reachedEnd(nodes) {
-			break
-		}
-		// goto next instruction
-		i++
-		if i >= len(ii) {
-			i = 0
-		}
+	return LCM(counts[0], counts[1], counts[2:]...)
+}
+
+// GCD returns the greatest common divisor via Euclidean algorithm
+func GCD(a, b int) int {
+	for b != 0 {
+		t := b
+		b = a % b
+		a = t
 	}
-	return c
+	return a
+}
+
+// LCM returns the Least Common Multiple via GCD
+func LCM(a, b int, vv ...int) int {
+	result := a * b / GCD(a, b)
+	for i := 0; i < len(vv); i++ {
+		result = LCM(result, vv[i])
+	}
+	return result
 }
 
 func Part2() string {
