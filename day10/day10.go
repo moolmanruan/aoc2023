@@ -7,12 +7,6 @@ import (
 	"strings"
 )
 
-//go:embed example1.txt
-var example1 string
-
-//go:embed example2.txt
-var example2 string
-
 //go:embed input.txt
 var input string
 
@@ -98,6 +92,120 @@ func (p pos) adjacentPositions() []pos {
 func NewPipeMap(data string) pipeMap {
 	return pipeMap{strings.Split(data, "\n")}
 }
+func (m pipeMap) insidePositions() map[pos]struct{} {
+	inside := make(map[pos]struct{})
+	for y, row := range m.data {
+		isInside := false
+		prevUD := NONE
+		for x, p := range row {
+			switch pipe(p) {
+			case UD:
+				isInside = !isInside
+			case DL:
+				if prevUD == UR {
+					isInside = !isInside
+				}
+				prevUD = NONE
+			case UL:
+				if prevUD == DR {
+					isInside = !isInside
+				}
+				prevUD = NONE
+			case DR, UR:
+				prevUD = pipe(p)
+			case NONE:
+				if isInside {
+					inside[pos{x, y}] = struct{}{}
+				}
+			}
+		}
+	}
+	return inside
+}
+
+func (m pipeMap) clean() pipeMap {
+	pp := m.pipePositions()
+	var newData []string
+	for ri, r := range m.data {
+		var line string
+		for ci := range r {
+			p := pos{ci, ri}
+			if _, ok := pp[p]; !ok {
+				line += string(NONE)
+			} else {
+				posPipe := m.at(p)
+				if posPipe == START {
+					posPipe = m.startPipe()
+				}
+				line += string(posPipe)
+			}
+		}
+		newData = append(newData, line)
+	}
+	return pipeMap{newData}
+}
+
+func (m pipeMap) String() string {
+	var lines []string
+	for _, r := range m.data {
+		var line string
+		for _, p := range r {
+			c := "."
+			switch pipe(p) {
+			case START:
+				c = "*"
+			case UL:
+				c = "┘"
+			case UR:
+				c = "└"
+			case DL:
+				c = "┐"
+			case DR:
+				c = "┌"
+			case LR:
+				c = "─"
+			case UD:
+				c = "│"
+			}
+			line += c
+		}
+		lines = append(lines, line)
+	}
+	return strings.Join(lines, "\n")
+}
+func (m pipeMap) StringInside() string {
+	ii := m.insidePositions()
+	var lines []string
+	for y, r := range m.data {
+		var line string
+		for x, p := range r {
+			if _, ok := ii[pos{x, y}]; ok {
+				line += "I"
+				continue
+			}
+			c := "."
+			switch pipe(p) {
+			case START:
+				c = "*"
+			case UL:
+				c = "┘"
+			case UR:
+				c = "└"
+			case DL:
+				c = "┐"
+			case DR:
+				c = "┌"
+			case LR:
+				c = "─"
+			case UD:
+				c = "│"
+			}
+			line += c
+		}
+		lines = append(lines, line)
+	}
+	return strings.Join(lines, "\n")
+}
 
 func (m pipeMap) startPos() pos {
 	for ri, r := range m.data {
@@ -108,6 +216,29 @@ func (m pipeMap) startPos() pos {
 		}
 	}
 	panic("No start found")
+}
+func (m pipeMap) startPipe() pipe {
+	p := m.startPos()
+	up := m.atSafe(p.up()).pointsDown()
+	down := m.atSafe(p.down()).pointsUp()
+	left := m.atSafe(p.left()).pointsRight()
+	right := m.atSafe(p.right()).pointsLeft()
+
+	switch {
+	case up && down:
+		return UD
+	case left && right:
+		return LR
+	case up && left:
+		return UL
+	case up && right:
+		return UR
+	case down && left:
+		return DL
+	case down && right:
+		return DR
+	}
+	return NONE
 }
 
 func (m pipeMap) connectedPipes(p pos) []pos {
@@ -142,7 +273,7 @@ func (m pipeMap) connectedPipes(p pos) []pos {
 	return pp
 }
 
-func (m pipeMap) loopLength() int {
+func (m pipeMap) pipePositions() map[pos]struct{} {
 	sp := m.startPos()
 	pipePositions := make(map[pos]struct{})
 	pipePositions[sp] = struct{}{}
@@ -159,7 +290,7 @@ mainLoop:
 		}
 		break
 	}
-	return len(pipePositions)
+	return pipePositions
 }
 
 func (m pipeMap) atSafe(p pos) pipe {
@@ -173,19 +304,20 @@ func (m pipeMap) at(p pos) pipe {
 	return pipe(m.data[p.y][p.x])
 }
 
-func prettify(data string) string {
-	s := strings.ReplaceAll(data, string(UL), "┘")
-	s = strings.ReplaceAll(s, string(UR), "└")
-	s = strings.ReplaceAll(s, string(DL), "┐")
-	s = strings.ReplaceAll(s, string(DR), "┌")
-	s = strings.ReplaceAll(s, string(LR), "─")
-	s = strings.ReplaceAll(s, string(UD), "│")
-	return s
-}
-
 func Part1() string {
 	data := input
-	fmt.Println(prettify(data))
+	fmt.Println(data)
 	m := NewPipeMap(data)
-	return strconv.Itoa(m.loopLength() / 2)
+	return strconv.Itoa(len(m.pipePositions()) / 2)
+}
+
+func Part2() string {
+	data := input
+	m := NewPipeMap(data)
+	m = m.clean()
+	fmt.Println(m)
+	insidePos := m.insidePositions()
+	fmt.Println(m.StringInside())
+	// 444 too high
+	return strconv.Itoa(len(insidePos))
 }

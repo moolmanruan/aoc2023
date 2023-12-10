@@ -55,7 +55,7 @@ var days = map[string]map[string]func() string{
 	},
 	"10": {
 		"1": day10.Part1,
-		//"2": day10.Part2,
+		"2": day10.Part2,
 	},
 }
 
