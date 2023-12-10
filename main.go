@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"ruan.moolman/aoc2023/day1"
+	"ruan.moolman/aoc2023/day10"
 	"ruan.moolman/aoc2023/day2"
 	"ruan.moolman/aoc2023/day3"
 	"ruan.moolman/aoc2023/day4"
@@ -50,7 +51,11 @@ var days = map[string]map[string]func() string{
 	},
 	"9": {
 		"1": day9.Part1,
-		//"2": day8.Part2,
+		"2": day9.Part2,
+	},
+	"10": {
+		"1": day10.Part1,
+		//"2": day10.Part2,
 	},
 }
 
