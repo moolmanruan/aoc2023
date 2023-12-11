@@ -2,7 +2,6 @@ package day11
 
 import (
 	_ "embed"
-	"fmt"
 	intmath "github.com/thomaso-mirodin/intmath/intgr"
 	"strconv"
 	"strings"
@@ -12,17 +11,31 @@ import (
 var input string
 
 const GALAXY string = "#"
-const EMPTY string = "."
 
 type position struct {
 	x, y int
 }
 
-func (p position) L1Distance(o position) int {
-	return intmath.Abs(o.x-p.x) + intmath.Abs(o.y-p.y)
+func (p position) L1DistanceThroughSpace(o position, cols, rows map[int]struct{}, factor int64) int64 {
+	minX := intmath.Min(o.x, p.x)
+	maxX := intmath.Max(o.x, p.x)
+	minY := intmath.Min(o.y, p.y)
+	maxY := intmath.Max(o.y, p.y)
+	var emptyCols, emptyRows int64
+	for x := minX + 1; x < maxX; x++ {
+		if _, ok := cols[x]; ok {
+			emptyCols++
+		}
+	}
+	for y := minY + 1; y < maxY; y++ {
+		if _, ok := rows[y]; ok {
+			emptyRows++
+		}
+	}
+	return int64(intmath.Abs(o.x-p.x)) + emptyCols*(factor-1) + int64(intmath.Abs(o.y-p.y)) + emptyRows*(factor-1)
 }
 
-func expand(space string) string {
+func emptySpace(space string) (map[int]struct{}, map[int]struct{}) {
 	rowsWithoutGalaxy := make(map[int]struct{})
 	colsWithGalaxy := make(map[int]struct{})
 	lines := strings.Split(space, "\n")
@@ -46,28 +59,13 @@ func expand(space string) string {
 		}
 	}
 
-	var newLines []string
-	for y, line := range lines {
-		var newLine string
-		for x, v := range line {
-			newLine += string(v)
-			if _, ok := colsWithoutGalaxy[x]; ok {
-				newLine += string(v)
-			}
-		}
-		newLines = append(newLines, newLine)
-		if _, ok := rowsWithoutGalaxy[y]; ok {
-			newLines = append(newLines, newLine)
-		}
-	}
-
-	return strings.Join(newLines, "\n")
+	return colsWithoutGalaxy, rowsWithoutGalaxy
 }
 
 func galaxyPositions(space string) []position {
 	var pp []position
-	for x, line := range strings.Split(space, "\n") {
-		for y, val := range line {
+	for y, line := range strings.Split(space, "\n") {
+		for x, val := range line {
 			if string(val) == GALAXY {
 				pp = append(pp, position{x, y})
 			}
@@ -77,18 +75,27 @@ func galaxyPositions(space string) []position {
 }
 
 func Part1() string {
-	space := expand(input)
-	fmt.Println(space)
+	space := input
+	colSet, rowSet := emptySpace(space)
 	pp := galaxyPositions(space)
-	var ans int
+	var ans int64
 	for i := 0; i < len(pp)-1; i++ {
 		for j := i + 1; j < len(pp); j++ {
-			ans += pp[i].L1Distance(pp[j])
+			ans += pp[i].L1DistanceThroughSpace(pp[j], colSet, rowSet, 2)
 		}
 	}
-	return strconv.Itoa(ans)
+	return strconv.FormatInt(ans, 10)
 }
 
 func Part2() string {
-	return "-"
+	space := input
+	colSet, rowSet := emptySpace(space)
+	pp := galaxyPositions(space)
+	var ans int64
+	for i := 0; i < len(pp)-1; i++ {
+		for j := i + 1; j < len(pp); j++ {
+			ans += pp[i].L1DistanceThroughSpace(pp[j], colSet, rowSet, 1000000)
+		}
+	}
+	return strconv.FormatInt(ans, 10)
 }
