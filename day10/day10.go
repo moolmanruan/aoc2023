@@ -3,6 +3,7 @@ package day10
 import (
 	_ "embed"
 	"fmt"
+	"ruan.moolman/aoc2023/set"
 	"strconv"
 	"strings"
 )
@@ -118,12 +119,12 @@ func (m pipeMap) String() string {
 	return strings.Join(lines, "\n")
 }
 
-func (m pipeMap) StringMarkPositions(ii map[position]struct{}, value string) string {
+func (m pipeMap) StringMarkPositions(ii set.Set[position], value string) string {
 	var lines []string
 	for y, r := range m.data {
 		var line string
 		for x, p := range r {
-			if _, ok := ii[position{x, y}]; ok {
+			if ii.Contains(position{x, y}) {
 				line += value
 				continue
 			}
@@ -134,8 +135,8 @@ func (m pipeMap) StringMarkPositions(ii map[position]struct{}, value string) str
 	return strings.Join(lines, "\n")
 }
 
-func (m pipeMap) insidePipeLoop() map[position]struct{} {
-	inside := make(map[position]struct{})
+func (m pipeMap) insidePipeLoop() set.Set[position] {
+	inside := set.NewSet[position]()
 	for y, row := range m.data {
 		isInside := false
 		startPipe := Empty
@@ -159,7 +160,7 @@ func (m pipeMap) insidePipeLoop() map[position]struct{} {
 				startPipe = Empty
 			case Empty:
 				if isInside {
-					inside[position{x, y}] = struct{}{}
+					inside.Add(position{x, y})
 				}
 			}
 		}
@@ -176,7 +177,7 @@ func (m pipeMap) clean() pipeMap {
 		var line string
 		for x := range r {
 			p := position{x, y}
-			if _, ok := pp[p]; !ok {
+			if !pp.Contains(p) {
 				line += string(Empty)
 			} else {
 				posPipe := m.at(p)
@@ -252,18 +253,18 @@ func (m pipeMap) leadsTo(p position) []position {
 	return pp
 }
 
-func (m pipeMap) pipePositions() map[position]struct{} {
+func (m pipeMap) pipePositions() set.Set[position] {
 	startPos := m.startPos()
-	pipePositions := make(map[position]struct{})
-	pipePositions[startPos] = struct{}{}
+	pipePositions := set.NewSet[position]()
+	pipePositions.Add(startPos)
 
 	activePos := startPos
 mainLoop:
 	for {
 		for _, p := range m.leadsTo(activePos) {
-			if _, ok := pipePositions[p]; !ok {
+			if !pipePositions.Contains(p) {
 				activePos = p
-				pipePositions[p] = struct{}{}
+				pipePositions.Add(p)
 				continue mainLoop
 			}
 		}
@@ -287,7 +288,7 @@ func Part1() string {
 	data := input
 	m := NewPipeMap(data)
 	fmt.Println(m)
-	return strconv.Itoa(len(m.pipePositions()) / 2)
+	return strconv.Itoa(m.pipePositions().Count() / 2)
 }
 
 func Part2() string {
@@ -295,5 +296,5 @@ func Part2() string {
 	m := NewPipeMap(data).clean()
 	insidePos := m.insidePipeLoop()
 	fmt.Println(m.StringMarkPositions(insidePos, "I"))
-	return strconv.Itoa(len(insidePos))
+	return strconv.Itoa(insidePos.Count())
 }

@@ -24,3 +24,7 @@ func (s Set[T]) Values() []T {
 	}
 	return vv
 }
+
+func (s Set[T]) Count() int {
+	return len(s.data)
+}

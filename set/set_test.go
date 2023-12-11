@@ -1,7 +1,7 @@
 package set_test
 
 import (
-	"fmt"
+	"github.com/stretchr/testify/assert"
 	"ruan.moolman/aoc2023/set"
 	"testing"
 )
@@ -9,12 +9,8 @@ import (
 func TestSetContains(t *testing.T) {
 	s := set.NewSet[int]()
 	s.Add(2)
-	if !s.Contains(2) {
-		t.Error("Expected Set to contain 2")
-	}
-	if s.Contains(3) {
-		t.Error("Expected Set to NOT contain 3")
-	}
+	assert.True(t, s.Contains(2))
+	assert.False(t, s.Contains(3))
 }
 
 func TestSetValues(t *testing.T) {
@@ -22,10 +18,15 @@ func TestSetValues(t *testing.T) {
 	s.Add(2)
 	s.Add(2)
 	s.Add(5)
-	want := []int{2, 5}
-	for i, v := range s.Values() {
-		if want[i] != v {
-			t.Error(fmt.Sprintf("Expected Values to return %v", want))
-		}
-	}
+	assert.Equal(t, []int{2, 5}, s.Values())
+}
+
+func TestSetCount(t *testing.T) {
+	s := set.NewSet[int]()
+	assert.Equal(t, s.Count(), 0)
+	s.Add(2)
+	assert.Equal(t, s.Count(), 1)
+	s.Add(2)
+	s.Add(5)
+	assert.Equal(t, s.Count(), 2)
 }
