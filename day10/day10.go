@@ -10,50 +10,68 @@ import (
 //go:embed input.txt
 var input string
 
-type pipeMap struct {
-	data []string
-}
-
-type dir string
+type direction string
 
 const (
-	UP    dir = "UP"
-	DOWN  dir = "DOWN"
-	LEFT  dir = "LEFT"
-	RIGHT dir = "RIGHT"
+	UP    direction = "UP"
+	DOWN  direction = "DOWN"
+	LEFT  direction = "LEFT"
+	RIGHT direction = "RIGHT"
 )
 
-type pipe string
+type object string
 
-func (p pipe) pointsDown() bool {
-	return p == DR || p == DL || p == UD
+func (o object) String() string {
+	switch o {
+	case Start:
+		return "*"
+	case PipeUpLeft:
+		return "┘"
+	case PipeUpRight:
+		return "└"
+	case PipeDownLeft:
+		return "┐"
+	case PipeDownRight:
+		return "┌"
+	case PipeLeftRight:
+		return "─"
+	case PipeUpDown:
+		return "│"
+	default:
+		return "."
+	}
 }
-func (p pipe) pointsUp() bool {
-	return p == UR || p == UL || p == UD
-}
-func (p pipe) pointsLeft() bool {
-	return p == UL || p == DL || p == LR
-}
-func (p pipe) pointsRight() bool {
-	return p == UR || p == DR || p == LR
+
+func (p object) pointsTo(dir direction) bool {
+	switch dir {
+	case DOWN:
+		return p == PipeDownRight || p == PipeDownLeft || p == PipeUpDown
+	case UP:
+		return p == PipeUpRight || p == PipeUpLeft || p == PipeUpDown
+	case LEFT:
+		return p == PipeUpLeft || p == PipeDownLeft || p == PipeLeftRight
+	case RIGHT:
+		return p == PipeUpRight || p == PipeDownRight || p == PipeLeftRight
+	}
+	return false
 }
 
 const (
-	NONE  pipe = "."
-	START pipe = "S"
-	UL    pipe = "J"
-	UR    pipe = "L"
-	DL    pipe = "7"
-	DR    pipe = "F"
-	LR    pipe = "-"
-	UD    pipe = "|"
+	Empty         object = "."
+	Start         object = "S"
+	PipeUpLeft    object = "J"
+	PipeUpRight   object = "L"
+	PipeDownLeft  object = "7"
+	PipeDownRight object = "F"
+	PipeLeftRight object = "-"
+	PipeUpDown    object = "|"
 )
 
-type pos struct {
+type position struct {
 	x, y int
 }
 
-func (p pos) adjacent(d dir) pos {
+func (p position) adjacent(d direction) position {
 	switch d {
 	case RIGHT:
 		return p.right()
@@ -67,55 +85,81 @@ func (p pos) adjacent(d dir) pos {
 	panic("Invalid direction")
 }
 
-func (p pos) right() pos {
-	return pos{p.x + 1, p.y}
+func (p position) right() position {
+	return position{p.x + 1, p.y}
 }
-func (p pos) left() pos {
-	return pos{p.x - 1, p.y}
+func (p position) left() position {
+	return position{p.x - 1, p.y}
 }
-func (p pos) up() pos {
-	return pos{p.x, p.y - 1}
+func (p position) up() position {
+	return position{p.x, p.y - 1}
 }
-func (p pos) down() pos {
-	return pos{p.x, p.y + 1}
+func (p position) down() position {
+	return position{p.x, p.y + 1}
 }
 
-func (p pos) adjacentPositions() []pos {
-	return []pos{
-		p.right(),
-		p.down(),
-		p.left(),
-		p.up(),
-	}
+type pipeMap struct {
+	data []string
 }
 
 func NewPipeMap(data string) pipeMap {
 	return pipeMap{strings.Split(data, "\n")}
 }
-func (m pipeMap) insidePositions() map[pos]struct{} {
-	inside := make(map[pos]struct{})
+
+func (m pipeMap) String() string {
+	var lines []string
+	for _, r := range m.data {
+		var line string
+		for _, p := range r {
+			line += object(p).String()
+		}
+		lines = append(lines, line)
+	}
+	return strings.Join(lines, "\n")
+}
+
+func (m pipeMap) StringMarkPositions(ii map[position]struct{}, value string) string {
+	var lines []string
+	for y, r := range m.data {
+		var line string
+		for x, p := range r {
+			if _, ok := ii[position{x, y}]; ok {
+				line += value
+				continue
+			}
+			line += object(p).String()
+		}
+		lines = append(lines, line)
+	}
+	return strings.Join(lines, "\n")
+}
+
+func (m pipeMap) insidePipeLoop() map[position]struct{} {
+	inside := make(map[position]struct{})
 	for y, row := range m.data {
 		isInside := false
-		prevUD := NONE
+		startPipe := Empty
 		for x, p := range row {
-			switch pipe(p) {
-			case UD:
+			obj := object(p)
+			switch obj {
+			case PipeUpDown:
 				isInside = !isInside
-			case DL:
-				if prevUD == UR {
+			case PipeDownRight, PipeUpRight:
+				// pipes that run horizontally start with a part going right
+				startPipe = obj
+			case PipeDownLeft, PipeUpLeft:
+				// pipes that run horizontally end with a part going left
+
+				// Only switch sides when the starting pipe is opposite to
+				// the end one wrt up down pipes
+				if startPipe.pointsTo(UP) && obj.pointsTo(DOWN) ||
+					startPipe.pointsTo(DOWN) && obj.pointsTo(UP) {
 					isInside = !isInside
 				}
-				prevUD = NONE
-			case UL:
-				if prevUD == DR {
-					isInside = !isInside
-				}
-				prevUD = NONE
-			case DR, UR:
-				prevUD = pipe(p)
-			case NONE:
+				startPipe = Empty
+			case Empty:
 				if isInside {
-					inside[pos{x, y}] = struct{}{}
+					inside[position{x, y}] = struct{}{}
 				}
 			}
 		}
@@ -123,18 +167,20 @@ func (m pipeMap) insidePositions() map[pos]struct{} {
 	return inside
 }
 
+// clean return a pipeMap where all pipes that don't belong to the
+// main loop are replaces by empty spots
 func (m pipeMap) clean() pipeMap {
 	pp := m.pipePositions()
 	var newData []string
-	for ri, r := range m.data {
+	for y, r := range m.data {
 		var line string
-		for ci := range r {
-			p := pos{ci, ri}
+		for x := range r {
+			p := position{x, y}
 			if _, ok := pp[p]; !ok {
-				line += string(NONE)
+				line += string(Empty)
 			} else {
 				posPipe := m.at(p)
-				if posPipe == START {
+				if posPipe == Start {
 					posPipe = m.startPipe()
 				}
 				line += string(posPipe)
@@ -145,143 +191,76 @@ func (m pipeMap) clean() pipeMap {
 	return pipeMap{newData}
 }
 
-func (m pipeMap) String() string {
-	var lines []string
-	for _, r := range m.data {
-		var line string
-		for _, p := range r {
-			c := "."
-			switch pipe(p) {
-			case START:
-				c = "*"
-			case UL:
-				c = "┘"
-			case UR:
-				c = "└"
-			case DL:
-				c = "┐"
-			case DR:
-				c = "┌"
-			case LR:
-				c = "─"
-			case UD:
-				c = "│"
-			}
-			line += c
-		}
-		lines = append(lines, line)
-	}
-	return strings.Join(lines, "\n")
-}
-func (m pipeMap) StringInside() string {
-	ii := m.insidePositions()
-	var lines []string
-	for y, r := range m.data {
-		var line string
-		for x, p := range r {
-			if _, ok := ii[pos{x, y}]; ok {
-				line += "I"
-				continue
-			}
-			c := "."
-			switch pipe(p) {
-			case START:
-				c = "*"
-			case UL:
-				c = "┘"
-			case UR:
-				c = "└"
-			case DL:
-				c = "┐"
-			case DR:
-				c = "┌"
-			case LR:
-				c = "─"
-			case UD:
-				c = "│"
-			}
-			line += c
-		}
-		lines = append(lines, line)
-	}
-	return strings.Join(lines, "\n")
-}
-
-func (m pipeMap) startPos() pos {
+// startPos returns the position of the start object
+func (m pipeMap) startPos() position {
 	for ri, r := range m.data {
 		for ci, p := range r {
-			if pipe(p) == START {
-				return pos{ci, ri}
+			if object(p) == Start {
+				return position{ci, ri}
 			}
 		}
 	}
 	panic("No start found")
 }
-func (m pipeMap) startPipe() pipe {
+
+// startPipe returns the pipe object type that is covered by the start object
+func (m pipeMap) startPipe() object {
 	p := m.startPos()
-	up := m.atSafe(p.up()).pointsDown()
-	down := m.atSafe(p.down()).pointsUp()
-	left := m.atSafe(p.left()).pointsRight()
-	right := m.atSafe(p.right()).pointsLeft()
+	up := m.atSafe(p.up()).pointsTo(DOWN)
+	down := m.atSafe(p.down()).pointsTo(UP)
+	left := m.atSafe(p.left()).pointsTo(RIGHT)
+	right := m.atSafe(p.right()).pointsTo(LEFT)
 
 	switch {
 	case up && down:
-		return UD
+		return PipeUpDown
 	case left && right:
-		return LR
+		return PipeLeftRight
 	case up && left:
-		return UL
+		return PipeUpLeft
 	case up && right:
-		return UR
+		return PipeUpRight
 	case down && left:
-		return DL
+		return PipeDownLeft
 	case down && right:
-		return DR
+		return PipeDownRight
 	}
-	return NONE
+	return Empty
 }
 
-func (m pipeMap) connectedPipes(p pos) []pos {
-	var pp []pos
-	switch m.at(p) {
-	case START:
-		if m.atSafe(p.up()).pointsDown() {
-			pp = append(pp, p.up())
-		}
-		if m.atSafe(p.down()).pointsUp() {
-			pp = append(pp, p.down())
-		}
-		if m.atSafe(p.left()).pointsRight() {
-			pp = append(pp, p.left())
-		}
-		if m.atSafe(p.right()).pointsLeft() {
-			pp = append(pp, p.right())
-		}
-	case UD:
+// leadsTo returns the positions a pipe at the given position `p` leads to
+func (m pipeMap) leadsTo(p position) []position {
+	var pp []position
+	pipe := m.at(p)
+	if pipe == Start {
+		pipe = m.startPipe()
+	}
+	switch pipe {
+	case PipeUpDown:
 		pp = append(pp, p.up(), p.down())
-	case LR:
+	case PipeLeftRight:
 		pp = append(pp, p.left(), p.right())
-	case UL:
+	case PipeUpLeft:
 		pp = append(pp, p.up(), p.left())
-	case UR:
+	case PipeUpRight:
 		pp = append(pp, p.up(), p.right())
-	case DL:
+	case PipeDownLeft:
 		pp = append(pp, p.down(), p.left())
-	case DR:
+	case PipeDownRight:
 		pp = append(pp, p.down(), p.right())
 	}
 	return pp
 }
 
-func (m pipeMap) pipePositions() map[pos]struct{} {
-	sp := m.startPos()
-	pipePositions := make(map[pos]struct{})
-	pipePositions[sp] = struct{}{}
+func (m pipeMap) pipePositions() map[position]struct{} {
+	startPos := m.startPos()
+	pipePositions := make(map[position]struct{})
+	pipePositions[startPos] = struct{}{}
 
-	activePos := sp
+	activePos := startPos
 mainLoop:
 	for {
-		for _, p := range m.connectedPipes(activePos) {
+		for _, p := range m.leadsTo(activePos) {
 			if _, ok := pipePositions[p]; !ok {
 				activePos = p
 				pipePositions[p] = struct{}{}
@@ -293,31 +272,28 @@ mainLoop:
 	return pipePositions
 }
 
-func (m pipeMap) atSafe(p pos) pipe {
+func (m pipeMap) atSafe(p position) object {
 	if p.y < 0 || p.x < 0 || p.y > len(m.data) || p.x > len(m.data[0]) {
-		return NONE
+		return Empty
 	}
 	return m.at(p)
 }
 
-func (m pipeMap) at(p pos) pipe {
-	return pipe(m.data[p.y][p.x])
+func (m pipeMap) at(p position) object {
+	return object(m.data[p.y][p.x])
 }
 
 func Part1() string {
 	data := input
-	fmt.Println(data)
 	m := NewPipeMap(data)
+	fmt.Println(m)
 	return strconv.Itoa(len(m.pipePositions()) / 2)
 }
 
 func Part2() string {
 	data := input
-	m := NewPipeMap(data)
-	m = m.clean()
-	fmt.Println(m)
-	insidePos := m.insidePositions()
-	fmt.Println(m.StringInside())
-	// 444 too high
+	m := NewPipeMap(data).clean()
+	insidePos := m.insidePipeLoop()
+	fmt.Println(m.StringMarkPositions(insidePos, "I"))
 	return strconv.Itoa(len(insidePos))
 }
