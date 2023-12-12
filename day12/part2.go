@@ -2,7 +2,6 @@ package day12
 
 import (
 	"fmt"
-	intmath "github.com/thomaso-mirodin/intmath/intgr"
 	"strconv"
 	"strings"
 )
@@ -17,107 +16,18 @@ func unfold(sp springReport, numFolds int) springReport {
 	return springReport{report: strings.Join(newReportLines, "?"), groups: newGroups}
 }
 
-func Part2Old() string {
-	lines := strings.Split(input, "\n")
-	var ans int
-	for _, line := range lines[:10] {
-		sp := parseSpringReport(line)
-		sp = unfold(sp, 5)
-		c := countVariations(sp.report, sp.groups, 0)
-		ans += c
-	}
-	return strconv.Itoa(ans)
-}
-
-func countVariations(report string, groups []int, nesting int) int {
-	if len(groups) == 0 {
-		panic("no groups")
-	}
-
-	minReportSize := sum(groups) + len(groups) - 1 // gaps
-	if len(report) < minReportSize {
-		panic("report shorter than min size required")
-	}
-
-	group := groups[0]
-	pp := groupValidPosWithStop(report, group, len(report)-minReportSize)
-
-	isLastGroup := len(groups) == 1
-
-	var count int
-	for _, pos := range pp {
-		if isLastGroup {
-			nextPos := pos + group
-			if !strings.Contains(report[nextPos:], "#") {
-				count++
-			}
-		} else {
-			nextPos := pos + group + 1
-			count += countVariations(report[nextPos:], groups[1:], nesting+1)
-		}
-	}
-	return count
-}
-
-func groupValidPosWithStop(report string, size, stopIndex int) []int {
-	var pp []int
-	if size > len(report) {
-		return pp
-	}
-	last := intmath.Min(len(report)-size, stopIndex)
-	firstActual := strings.Index(report, "#")
-	if firstActual >= 0 {
-		last = intmath.Min(last, firstActual)
-	}
-
-positionLoop:
-	for i := 0; i <= last; i++ {
-		// should be open before the group
-		if i > 0 {
-			if report[i-1] == '#' {
-				continue positionLoop
-			}
-		}
-		// should have values for each spot in the group
-		for j := 0; j < size; j++ {
-			if report[i+j] == '.' {
-				continue positionLoop
-			}
-		}
-		// should be open after the group
-		iLast := i + size
-		if iLast < len(report) {
-			if report[iLast] == '#' {
-				continue positionLoop
-			}
-		}
-		pp = append(pp, i)
-	}
-	return pp
-}
-
-func sliceMax(vv []int) int {
-	v := vv[0]
-	for _, val := range vv {
-		if val > v {
-			v = val
-		}
-	}
-	return v
-}
-
 func Part2() string {
 	lines := strings.Split(input, "\n")
 	var ans int
+	numLines := len(lines)
 	for li, line := range lines {
-		fmt.Println(li)
+		fmt.Printf("%d/%d\n", li, numLines)
 		sp := parseSpringReport(line)
 		sp = unfold(sp, 5)
-
-		c := split(sp.report, sp.groups)
-
-		ans += c
+		ans += countVariations(sp.report, sp.groups)
 	}
+	fmt.Println("Part 1: 7705")
+	fmt.Println("Part 2: 50338344809230")
 	return strconv.Itoa(ans)
 }
 
@@ -149,59 +59,40 @@ func rightIntSlice(s []int, i int) []int {
 	return s[i:]
 }
 
-//func minGroups(input string) int {
-//
-//	for _, c := range input {
-//
-//	}
-//}
-
-func medianIndex(gg []int, val int) int {
-	var ii []int
-	for i, g := range gg {
-		if g == val {
-			ii = append(ii, i)
-		}
-	}
-	return ii[len(ii)/2]
-}
-
-func split(report string, groups []int) int {
+func countVariations(report string, groups []int) int {
 	if len(groups) > 0 && len(report) == 0 {
+		// invalid if we still have groups to place, but no space left
 		return 0
 	}
 	if len(groups) == 0 {
 		if len(report) == 0 {
+			// if we have no space, but now groups as well, this is valid
 			return 1
 		} else if !strings.Contains(report, "#") {
+			// if there are no forced placements left, this is valid
 			return 1
 		} else {
+			// out of groups, but still need to place, thus invalid
 			return 0
 		}
 	}
 
-	largestGroup := sliceMax(groups)
-	groupIndex := medianIndex(groups, largestGroup)
+	// get the middle group to split the remaining groups
+	groupIndex := len(groups) / 2
+	group := groups[groupIndex]
 
-	pp := groupValidPos(report, largestGroup)
 	var branches int
-	// should at least have one side group...
-	for _, p := range pp {
-		c := 1
+	// for each valid position of the group, count up all the variations
+	for _, p := range groupValidPos(report, group) {
 		// left
-		lC := split(leftString(report, p-gap), leftIntSlice(groups, groupIndex))
+		lC := countVariations(leftString(report, p-gap), leftIntSlice(groups, groupIndex))
 		if lC == 0 {
+			// don't do the right hand side if this is already 0
 			continue
 		}
-		c *= lC
-
 		// right
-		rC := split(rightString(report, p+largestGroup+gap), rightIntSlice(groups, groupIndex+1))
-		if rC == 0 {
-			continue
-		}
-		c *= rC
-		branches += c
+		rC := countVariations(rightString(report, p+group+gap), rightIntSlice(groups, groupIndex+1))
+		branches += lC * rC
 	}
 	return branches
 }
