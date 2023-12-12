@@ -98,7 +98,3 @@ func Part1() string {
 	}
 	return strconv.Itoa(ans)
 }
-
-func Part2() string {
-	return ""
-}
